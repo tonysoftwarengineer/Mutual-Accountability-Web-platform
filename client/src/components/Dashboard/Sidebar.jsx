@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-const Sidebar = ({ currentView, sidebarOpen, setIsNewGoalModalOpen, logout }) => {
+const Sidebar = ({ currentView, sidebarOpen, logout }) => {
   return (
     <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#f8fafc] border-r border-gray-200 transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-0 flex flex-col justify-between ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
       }`}>
@@ -49,12 +49,12 @@ const Sidebar = ({ currentView, sidebarOpen, setIsNewGoalModalOpen, logout }) =>
         </nav>
       </div>
       <div className="p-6 space-y-4">
-        <button
-          onClick={() => setIsNewGoalModalOpen(true)}
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium text-sm text-white bg-[#00685f] hover:bg-[#004d46] transition-colors shadow-sm"
+        <Link
+          to="/goals/new"
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium text-sm text-white bg-[#00685f] hover:bg-[#004d46] transition-colors shadow-sm justify-center"
         >
           <span className="text-lg">✨</span> New Goal
-        </button>
+        </Link>
         <button
           onClick={logout}
           className="flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium text-sm text-red-600 bg-red-50 border border-red-200/40 hover:bg-red-100 hover:text-red-700 transition-colors duration-200 shadow-xs"

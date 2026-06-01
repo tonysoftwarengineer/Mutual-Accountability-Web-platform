@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import useNotificationStore from "../../store/useNotificationStore";
 
-const Header = ({ headerContent, currentView, authUser, goals, activePactsList, setIsNewGoalModalOpen }) => {
+const Header = ({ headerContent, currentView, authUser, goals, activePactsList }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef(null);
   const { notifications, unreadCount, fetchNotifications, markAsRead } = useNotificationStore();
@@ -80,12 +80,12 @@ const Header = ({ headerContent, currentView, authUser, goals, activePactsList, 
           </div>
         )}
         {currentView === "goals" && (
-          <button
-            onClick={() => setIsNewGoalModalOpen(true)}
-            className="bg-[#00685f] hover:bg-[#004d46] text-white px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-sm border border-[#00685f]/10"
+          <Link
+            to="/goals/new"
+            className="bg-[#00685f] hover:bg-[#004d46] text-white px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-sm border border-[#00685f]/10 flex items-center justify-center"
           >
             + Add New Goal
-          </button>
+          </Link>
         )}
         {currentView === "partners" && activePactsList.length > 0 && (
           <div className="hidden lg:flex flex-col items-end border-l border-slate-200 pl-6 h-10 justify-center">
@@ -111,7 +111,7 @@ const Header = ({ headerContent, currentView, authUser, goals, activePactsList, 
             </button>
             
             {showNotifications && (
-              <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
+              <div className="fixed sm:absolute left-4 right-4 top-24 sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[100] origin-top">
                 <div className="px-5 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
                   <h3 className="font-bold text-sm text-gray-900 tracking-wide">Notifications</h3>
                   {unreadCount > 0 && (

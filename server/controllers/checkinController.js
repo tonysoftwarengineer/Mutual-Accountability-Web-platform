@@ -27,16 +27,25 @@ const submitCheckIn = async (req, res) => {
     const now = new Date();
     const todayStr = formatInTimeZone(now, userTimezone, 'yyyy-MM-dd');
 
-    // 2. Prevent duplicate check-ins for the same day
-    if (goal.lastCheckinAt) {
-      const lastCheckinStr = formatInTimeZone(goal.lastCheckinAt, userTimezone, 'yyyy-MM-dd');
-      if (lastCheckinStr === todayStr) {
-        return res.status(400).json({
-          success: false,
-          message: 'Already submitted a check-in for this goal today',
-        });
-      }
+    // 2. Prevent duplicate check-ins (pending or approved) for the same day
+    const recentCheckins = await CheckIn.find({
+      goal: goalId,
+      user: userId,
+      createdAt: { $gte: new Date(Date.now() - 36 * 60 * 60 * 1000) } // Cover overlapping timezones
+    });
+
+    const hasCheckinToday = recentCheckins.some(c => {
+      const checkinDateStr = formatInTimeZone(c.createdAt, userTimezone, 'yyyy-MM-dd');
+      return checkinDateStr === todayStr;
+    });
+
+    if (hasCheckinToday) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already submitted a check-in for this goal today! 🤝',
+      });
     }
+
 
     // 3. Create the check-in with pending status
     const checkIn = await CheckIn.create({

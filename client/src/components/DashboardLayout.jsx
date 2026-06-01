@@ -5,13 +5,12 @@ import { useGoalStore } from "../store/useGoalStore";
 import { usePartnershipStore } from "../store/usePartnershipStore";
 import Sidebar from "./Dashboard/Sidebar";
 import Header from "./Dashboard/Header";
-import NewGoalModal from "./Modals/NewGoalModal";
 import CheckInModal from "./Modals/CheckInModal";
 import { connectSocket, disconnectSocket } from '../lib/socket';
 import useNotificationStore from "../store/useNotificationStore";
 
 const DashboardLayout = () => {
-  const { authUser, logout, updateProfileSettings } = useAuthStore();
+  const { authUser, logout, updateProfileSettings, checkAuth } = useAuthStore();
   const { goals, createGoal, toggleMilestone, fetchGoals, submitCheckIn, isLoading: isGoalsLoading, checkInHistory, fetchCheckInHistory } = useGoalStore();
   const { addNotification, fetchNotifications } = useNotificationStore();
 
@@ -45,7 +44,6 @@ const DashboardLayout = () => {
   } = usePartnershipStore();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isNewGoalModalOpen, setIsNewGoalModalOpen] = useState(false);
 
   // Navigation & View State
   const [settingsTimezone, setSettingsTimezone] = useState(authUser?.timezone || "UTC");
@@ -98,16 +96,10 @@ const DashboardLayout = () => {
   })();
 
   const location = useLocation();
-  const currentView = location.pathname.split("/").filter(Boolean).pop() || "dashboard";
+  const pathParts = location.pathname.split("/").filter(Boolean);
+  const currentView = pathParts[0] || "dashboard";
 
-  // New Goal Form State
-  const [goalTitle, setGoalTitle] = useState("");
-  const [goalCategory, setGoalCategory] = useState("study");
-  const [goalDescription, setGoalDescription] = useState("");
-  const [goalDeadline, setGoalDeadline] = useState("");
-  const [goalFrequency, setGoalFrequency] = useState("daily");
-  const [goalMilestones, setGoalMilestones] = useState([""]);
-  const [goalError, setGoalError] = useState("");
+
 
   // Search Partner Drawer/Modal State
   const [searchUsername, setSearchUsername] = useState("");
@@ -180,6 +172,8 @@ const DashboardLayout = () => {
       socket.on('checkin_approved', () => {
         showToast('Your check-in was approved by your partner! 🤝', 'success');
         fetchFeed();
+        fetchGoals();
+        checkAuth();
       });
 
       socket.on('comment_added', () => {
@@ -194,7 +188,7 @@ const DashboardLayout = () => {
         disconnectSocket();
       };
     }
-  }, [authUser?._id, fetchFeed]);
+  }, [authUser?._id, fetchFeed, fetchGoals, checkAuth]);
 
   // Handle Milestone toggling with index mapped to backend
   const handleToggleMilestone = async (goalId, milestoneIndex) => {
@@ -225,73 +219,7 @@ const DashboardLayout = () => {
     }
   };
 
-  // Milestone builder handlers
-  const handleAddMilestoneField = () => {
-    setGoalMilestones([...goalMilestones, ""]);
-  };
 
-  const handleMilestoneFieldChange = (index, value) => {
-    const updated = [...goalMilestones];
-    updated[index] = value;
-    setGoalMilestones(updated);
-  };
-
-  const handleRemoveMilestoneField = (index) => {
-    if (goalMilestones.length === 1) return;
-    const updated = goalMilestones.filter((_, i) => i !== index);
-    setGoalMilestones(updated);
-  };
-
-  // Submit Goal Handler
-  const handleCreateGoalSubmit = async (e) => {
-    e.preventDefault();
-    setGoalError("");
-
-    if (!goalTitle.trim()) {
-      setGoalError("Goal Title is required.");
-      return;
-    }
-
-    if (!goalDeadline) {
-      setGoalError("A target deadline date is required.");
-      return;
-    }
-
-    const filteredMilestones = goalMilestones.filter((m) => m.trim() !== "");
-    if (filteredMilestones.length === 0) {
-      setGoalError("At least one milestone is required.");
-      return;
-    }
-
-    // Map milestone strings to targetDate objects for Fawaz's backend schema!
-    const milestonesPayload = filteredMilestones.map(m => ({
-      title: m,
-      targetDate: goalDeadline // Fallback target date is the overall deadline
-    }));
-
-    const res = await createGoal({
-      title: goalTitle,
-      category: goalCategory,
-      description: goalDescription,
-      deadline: goalDeadline,
-      frequency: goalFrequency,
-      milestones: milestonesPayload
-    });
-
-    if (res.success) {
-      showToast("New performance cycle initiated! 🎯");
-      setIsNewGoalModalOpen(false);
-      // Reset form
-      setGoalTitle("");
-      setGoalCategory("study");
-      setGoalDescription("");
-      setGoalDeadline("");
-      setGoalFrequency("daily");
-      setGoalMilestones([""]);
-    } else {
-      setGoalError(res.message || "Failed to create goal. Try again.");
-    }
-  };
 
   // Search Teammate Handler
   const handleSearchPartnerSubmit = async (e) => {
@@ -356,6 +284,8 @@ const DashboardLayout = () => {
     if (res.success) {
       showToast("Check-in submitted! Waiting for partner verification. 🤝");
       setIsCheckInModalOpen(false);
+      // Refresh check-in history to immediately reflect the new pending check-in
+      fetchCheckInHistory(checkInGoalId);
       // Reset form
       setCheckInNote("");
       setCheckInStake("");
@@ -368,11 +298,21 @@ const DashboardLayout = () => {
   // Calculate pending milestones
   const pendingMilestonesCount = goals.flatMap(g => g.milestones || []).filter(m => !m.completed).length;
 
-  // Calculate if there are active goals unchecked today
+  // Calculate if there are active goals unchecked today (neither pending nor approved check-ins exist for today)
   const hasUncheckedActiveGoal = goals.length > 0 && goals.some(g => {
     if (g.status !== 'active') return false;
-    if (!g.lastCheckinAt) return true;
+    
     const todayStr = new Date().toDateString();
+    
+    // Check if there is any check-in today in the local history
+    const history = checkInHistory[g._id];
+    if (history && Array.isArray(history)) {
+      const hasCheckinToday = history.some(c => new Date(c.createdAt).toDateString() === todayStr);
+      return !hasCheckinToday;
+    }
+    
+    // Fallback to lastCheckinAt if history is not loaded yet
+    if (!g.lastCheckinAt) return true;
     const lastCheckinStr = new Date(g.lastCheckinAt).toDateString();
     return lastCheckinStr !== todayStr;
   });
@@ -465,7 +405,6 @@ const DashboardLayout = () => {
         currentView={currentView}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        setIsNewGoalModalOpen={setIsNewGoalModalOpen}
         logout={logout}
       />
 
@@ -492,7 +431,6 @@ const DashboardLayout = () => {
             authUser={authUser}
             goals={goals}
             activePactsList={activePactsList}
-            setIsNewGoalModalOpen={setIsNewGoalModalOpen}
           />
 
           <Outlet context={{
@@ -501,39 +439,17 @@ const DashboardLayout = () => {
             feed, feedHasMore, feedIsLoadingMore, publicFeed, publicFeedHasMore, publicFeedIsLoadingMore, leaderboard, approveCheckin, partner, activePartners, activePartnershipData,
             searchUser, sendInvite, partnerships, fetchPartnerships, respondToInvite, fetchActivePartnership, fetchFeed, fetchMoreFeed, fetchPublicFeed, fetchMorePublicFeed, fetchLeaderboard, dissolvePartnership, sendReaction, addComment,
             sidebarOpen, setSidebarOpen,
-            isNewGoalModalOpen, setIsNewGoalModalOpen,
             activePartnersList, activePactsList,
-            goalTitle, setGoalTitle, goalCategory, setGoalCategory, goalDescription, setGoalDescription, goalDeadline, setGoalDeadline, goalFrequency, setGoalFrequency, goalMilestones, setGoalMilestones, goalError, setGoalError,
             searchUsername, setSearchUsername, searchResult, setSearchResult, searchError, setSearchError, isSearching, setIsSearching, inviteSent, setInviteSent, inviteGoalId, setInviteGoalId,
             isCheckInModalOpen, setIsCheckInModalOpen, checkInGoalId, setCheckInGoalId, checkInNote, setCheckInNote, checkInStake, setCheckInStake, checkInProgress, setCheckInProgress, checkInError, setCheckInError, isSubmittingCheckIn, setIsSubmittingCheckIn,
-            showToast, handleToggleMilestone, handleApproveCheckin, handleAddMilestoneField, handleMilestoneFieldChange, handleRemoveMilestoneField, handleCreateGoalSubmit, handleSearchPartnerSubmit, handleInvitePartnerSubmit, handleCreateCheckInSubmit, handleSendNudge,
+            showToast, handleToggleMilestone, handleApproveCheckin, handleSearchPartnerSubmit, handleInvitePartnerSubmit, handleCreateCheckInSubmit, handleSendNudge,
             pendingMilestonesCount, hasUncheckedActiveGoal, getDaysLeft, incomingPendingInvites,
             settingsTimezone, setSettingsTimezone, settingsBio, setSettingsBio, settingsCategories, setSettingsCategories
           }} />
         </main>
       </div>
 
-      {/* NEW GOAL MODAL (Interactive & Dynamic Milestone Builder) */}
-      <NewGoalModal
-        isOpen={isNewGoalModalOpen}
-        onClose={() => setIsNewGoalModalOpen(false)}
-        goalTitle={goalTitle}
-        setGoalTitle={setGoalTitle}
-        goalCategory={goalCategory}
-        setGoalCategory={setGoalCategory}
-        goalDescription={goalDescription}
-        setGoalDescription={setGoalDescription}
-        goalDeadline={goalDeadline}
-        setGoalDeadline={setGoalDeadline}
-        goalFrequency={goalFrequency}
-        setGoalFrequency={setGoalFrequency}
-        goalMilestones={goalMilestones}
-        goalError={goalError}
-        handleCreateGoalSubmit={handleCreateGoalSubmit}
-        handleAddMilestoneField={handleAddMilestoneField}
-        handleMilestoneFieldChange={handleMilestoneFieldChange}
-        handleRemoveMilestoneField={handleRemoveMilestoneField}
-      />
+
 
       {/* CHECK-IN SUBMISSION MODAL */}
       <CheckInModal

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, Link } from "react-router-dom";
 
 const DashboardPage = () => {
   const context = useOutletContext();
@@ -7,11 +7,10 @@ const DashboardPage = () => {
     authUser, goals, partner, activePartnersList, activePactsList, checkInHistory,
     feed, feedHasMore, feedIsLoadingMore, fetchMoreFeed, approveCheckin, respondToInvite, searchUser, sendInvite,
     isGoalsLoading, pendingMilestonesCount, hasUncheckedActiveGoal, getDaysLeft, incomingPendingInvites,
-    sidebarOpen, setSidebarOpen, isNewGoalModalOpen, setIsNewGoalModalOpen,
-    goalTitle, setGoalTitle, goalCategory, setGoalCategory, goalDescription, setGoalDescription, goalDeadline, setGoalDeadline, goalFrequency, setGoalFrequency, goalMilestones, setGoalMilestones, goalError, setGoalError,
+    sidebarOpen, setSidebarOpen,
     searchUsername, setSearchUsername, searchResult, setSearchResult, searchError, setSearchError, isSearching, setIsSearching, inviteSent, setInviteSent, inviteGoalId, setInviteGoalId,
     isCheckInModalOpen, setIsCheckInModalOpen, checkInGoalId, setCheckInGoalId, checkInNote, setCheckInNote, checkInStake, setCheckInStake, checkInProgress, setCheckInProgress, checkInError, setCheckInError, isSubmittingCheckIn, setIsSubmittingCheckIn,
-    showToast, handleToggleMilestone, handleApproveCheckin, handleAddMilestoneField, handleMilestoneFieldChange, handleRemoveMilestoneField, handleCreateGoalSubmit, handleSearchPartnerSubmit, handleInvitePartnerSubmit, handleCreateCheckInSubmit, handleSendNudge,
+    showToast, handleToggleMilestone, handleApproveCheckin, handleSearchPartnerSubmit, handleInvitePartnerSubmit, handleCreateCheckInSubmit, handleSendNudge,
     settingsTimezone, setSettingsTimezone, settingsBio, setSettingsBio, settingsCategories, setSettingsCategories, updateProfileSettings
   } = context;
 
@@ -272,8 +271,8 @@ const DashboardPage = () => {
                     )}
 
                     {/* Start a new journey card */}
-                    <div
-                      onClick={() => setIsNewGoalModalOpen(true)}
+                    <Link
+                      to="/goals/new"
                       className="rounded-2xl border-2 border-dashed border-gray-300 p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-colors min-h-[240px] group"
                     >
                       <div className="w-12 h-12 rounded-full bg-white border border-gray-300 shadow-sm flex items-center justify-center text-gray-400 mb-4 text-2xl group-hover:scale-110 group-hover:text-[#00685f] group-hover:border-[#00685f] transition-all">
@@ -281,7 +280,7 @@ const DashboardPage = () => {
                       </div>
                       <h4 className="text-lg font-bold text-gray-900 mb-1 tracking-tight group-hover:text-[#00685f] transition-colors">Start a new journey</h4>
                       <p className="text-sm text-gray-500 font-medium">Focus on what matters most.</p>
-                    </div>
+                    </Link>
                   </div>
 
                   {/* My Accountability Pact Hub */}
@@ -368,14 +367,14 @@ const DashboardPage = () => {
                               {idx === 1 && <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-orange-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] text-white">⚡</div>}
                             </div>
 
-                            <div className="flex-1 pb-2">
-                              <p className="text-sm text-gray-800 font-medium leading-snug">
+                            <div className="flex-1 pb-2 min-w-0 w-full overflow-hidden">
+                              <p className="text-sm text-gray-800 font-medium leading-snug break-all sm:break-words">
                                 <span className="font-bold text-gray-900">{item.partnerName}</span> {item.action} {item.isBadge ? `"${item.badgeName}"` : ""}
                               </p>
                               <span className="text-[11px] font-medium text-gray-400 block mb-2">{item.timestamp}</span>
 
                               {!item.isBadge && item.note && (
-                                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-sm italic text-gray-600 mb-3 relative">
+                                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-sm italic text-gray-600 mb-3 relative break-all sm:break-words">
                                   "{item.note}"
                                   {/* Little triangle pointer */}
                                   <div className="absolute -left-1.5 top-3 w-3 h-3 bg-white border-l border-b border-gray-200 transform rotate-45"></div>
@@ -472,9 +471,21 @@ const DashboardPage = () => {
                         </p>
                         <button
                           onClick={() => {
-                            const firstActiveGoal = goals.find(g => g.status === 'active');
-                            if (firstActiveGoal) {
-                              setCheckInGoalId(firstActiveGoal._id);
+                            // Find the first active goal that has not been checked in today (neither pending nor approved)
+                            const todayStr = new Date().toDateString();
+                            const uncheckedGoal = goals.find(g => {
+                              if (g.status !== 'active') return false;
+                              const history = checkInHistory[g._id];
+                              if (history && Array.isArray(history)) {
+                                const hasCheckinToday = history.some(c => new Date(c.createdAt).toDateString() === todayStr);
+                                return !hasCheckinToday;
+                              }
+                              if (!g.lastCheckinAt) return true;
+                              return new Date(g.lastCheckinAt).toDateString() !== todayStr;
+                            });
+
+                            if (uncheckedGoal) {
+                              setCheckInGoalId(uncheckedGoal._id);
                               setIsCheckInModalOpen(true);
                             }
                           }}

@@ -1,10 +1,10 @@
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, Link } from "react-router-dom";
 import { useState } from "react";
 
 const GoalsPage = () => {
   const context = useOutletContext();
   const {
-    authUser, goals, activePartnersList, setIsNewGoalModalOpen, checkInHistory,
+    authUser, goals, activePartnersList, checkInHistory,
     handleToggleMilestone, getDaysLeft
   } = context;
 
@@ -164,8 +164,8 @@ const GoalsPage = () => {
           )}
 
           {/* Start a new journey card */}
-          <div
-            onClick={() => setIsNewGoalModalOpen(true)}
+          <Link
+            to="/goals/new"
             className="rounded-2xl border-2 border-dashed border-gray-300 p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-colors min-h-[240px] group"
           >
             <div className="w-12 h-12 rounded-full bg-white border border-gray-300 shadow-sm flex items-center justify-center text-gray-400 mb-4 text-2xl group-hover:scale-110 group-hover:text-[#00685f] group-hover:border-[#00685f] transition-all">
@@ -173,7 +173,7 @@ const GoalsPage = () => {
             </div>
             <h4 className="text-lg font-bold text-gray-900 mb-1 tracking-tight group-hover:text-[#00685f] transition-colors">Start a new journey</h4>
             <p className="text-sm text-gray-500 font-medium">Focus on what matters most.</p>
-          </div>
+          </Link>
         </div>
       </div>
     </>
