@@ -32,6 +32,7 @@ CheckinSchema.index({ goal: 1, createdAt: -1 });
 CheckinSchema.index({ user: 1, status: 1 });
 CheckinSchema.index({ status: 1, createdAt: -1 });
 CheckinSchema.index({ user: 1, createdAt: -1 });
+CheckinSchema.index({ user: 1, goal: 1, createdAt: -1 }); // Compound index for isolated feed queries
 
 module.exports = mongoose.model('CheckIn', CheckinSchema);
 

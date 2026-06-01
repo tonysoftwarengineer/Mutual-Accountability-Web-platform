@@ -267,19 +267,37 @@ const getCheckInFeed = async (req, res) => {
       return res.status(200).json({ success: true, data: [], hasMore: false, nextCursor: null });
     }
 
-    // Determine the partner IDs and build a name map
+    // Determine the partner IDs, goals, and build a name map
     const partnerIds = [];
     const partnerNameMap = {};
+    const feedConditions = [];
 
     activePartnerships.forEach(active => {
       const isRequester = active.requester._id.toString() === req.user._id.toString();
       const partner = isRequester ? active.recipient : active.requester;
+      
+      // Determine which goal is the partner's goal
+      // If user is requester, the partner's goal is 'partnerGoal'
+      // If user is recipient, the partner's goal is 'goal'
+      const partnerGoalId = isRequester ? active.partnerGoal : active.goal;
+
       partnerIds.push(partner._id);
       partnerNameMap[partner._id.toString()] = partner.name;
+
+      if (partnerGoalId) {
+        feedConditions.push({ user: partner._id, goal: partnerGoalId });
+      } else {
+        console.warn(`[getCheckInFeed] Active partnership ${active._id} has an undefined goal for partner ${partner._id}. Skipping in feed.`);
+      }
     });
 
+    if (feedConditions.length === 0) {
+      // If no valid user/goal combinations exist, return empty feed
+      return res.status(200).json({ success: true, data: [], hasMore: false, nextCursor: null });
+    }
+
     const limit = parseInt(req.query.limit) || 10;
-    const query = { user: { $in: partnerIds } };
+    const query = { $or: feedConditions };
     
     // If cursor (timestamp string) is passed, get items created before that timestamp
     if (req.query.cursor) {
