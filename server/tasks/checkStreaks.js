@@ -34,6 +34,13 @@ const runCheckStreaks = async () => {
       const now = new Date();
 
       if (isAfter(now, dueInTZ)) {
+        // If there is any pending check-in, wait for it to be reviewed before resetting the streak.
+        // The checkinController will properly handle any calendar gaps when it is approved.
+        const pendingCheckin = await CheckIn.findOne({ goal: goal._id, user: user._id, status: 'pending' });
+        if (pendingCheckin) {
+          continue;
+        }
+
         // Check if there's any approved checkin for this goal after the previous nextCheckinDue -
         // If lastCheckinAt exists and is before or equal to nextCheckinDue, then no approved check-in happened.
 

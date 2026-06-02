@@ -76,7 +76,9 @@ export const useGoalStore = create((set) => ({
       return { success: true, data: res.data.data };
     } catch (error) {
       console.error("Error in submitCheckIn:", error);
-      return { success: false, message: error.response?.data?.message || "Failed to submit check-in" };
+      const data = error.response?.data;
+      const message = data?.errors?.[0]?.message || data?.message || "Failed to submit check-in";
+      return { success: false, message };
     }
   },
 

@@ -277,6 +277,11 @@ const DashboardLayout = () => {
       return;
     }
 
+    if (checkInNote.trim().length < 15) {
+      setCheckInError("Check-in note (proof) must be at least 15 characters.");
+      return;
+    }
+
     setIsSubmittingCheckIn(true);
     const res = await submitCheckIn(checkInGoalId, checkInNote, checkInStake, checkInProgress);
     setIsSubmittingCheckIn(false);
