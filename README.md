@@ -1,103 +1,120 @@
-# 🤝 Mutual: The Accountability Partner Platform
+# Mutual — Accountability Partner Platform
 
-> *People set goals and quit because no one is watching. Mutual changes that.*
+A full-stack web application that helps people follow through on goals by pairing them with an accountability partner. Users can create goals, submit check-ins, form partnerships, and track streaks from a responsive dashboard.
 
-Mutual is a full-stack MERN application that pairs users together to achieve their goals. It moves beyond single-player habit tracking by introducing mutual accountability, photo/text check-ins, and real-time social reactions to keep streaks alive.
+## Why I built it
 
-Built as a high-performance MVP in a 14-day sprint.
+Most goal-tracking apps are single-player: a user sets a goal and relies only on self-discipline to keep going. Mutual adds a social layer by making progress visible to an accountability partner.
 
-## ✨ Features
-* **Goal Engine:** Set specific goals, deadlines, and check-in frequencies.
-* **Auto-Matching:** Search for partners or get matched based on goal compatibility.
-* **The Accountability Feed:** A real-time, shared feed of daily check-ins.
-* **Live Reactions:** Partners can approve check-ins or leave comments instantly via WebSockets.
-* **Automated Streaks:** Background cron jobs track consistency and penalize missed days based on local timezones.
+## What it does
 
-## 🛠️ Tech Stack
-**Frontend:**
-* React 18 (Vite)
-* React Router v6
-* Zustand (State Management)
-* Tailwind CSS + shadcn/ui (Styling)
-* Axios (Data Fetching)
+- Register and sign in with cookie-based JWT authentication
+- Create and manage goals with deadlines and check-in schedules
+- Submit text or photo-based check-ins against a goal
+- Create and manage accountability partnerships
+- Track goal progress and consistency streaks
+- Run scheduled background logic for streak-related processing
+- Expose a health-check endpoint for deployment monitoring
 
-**Backend:**
-* Node.js + Express.js
-* MongoDB + Mongoose ODM
-* Socket.io (Real-time updates)
-* Zod (Schema Validation)
-* node-cron (Background jobs)
-* JWT + bcryptjs (HTTP-only Cookie Auth)
+## Engineering highlights
 
----
+- Structured the app as a client/server monorepo with separate React and Express applications.
+- Built REST APIs for authentication, goals, check-ins, and partnerships.
+- Used MongoDB/Mongoose to model users, goals, check-ins, and relationships.
+- Protected browser sessions with HTTP-only cookies and configured CORS to allow credentialed requests from the client.
+- Added Zod validation at API boundaries and centralized server concerns into routes, controllers, models, middleware, and utilities.
+- Designed the client around React Router, Zustand state management, and reusable UI components.
 
-## 🚀 Local Development Setup
+## Tech stack
 
-Follow these steps to run the Mutual platform on your local machine.
+| Layer | Technologies |
+| --- | --- |
+| Frontend | React, Vite, React Router, Zustand, Axios, Tailwind CSS |
+| Backend | Node.js, Express, JWT, bcryptjs, Zod, node-cron |
+| Database | MongoDB, Mongoose |
+| Tooling | ESLint, Nodemon |
+
+## Architecture
+
+```text
+React client
+    ↓ HTTP requests (credentials enabled)
+Express API
+    ├── auth, goals, check-ins, partnerships routes
+    ├── validation and authentication middleware
+    └── Mongoose models
+            ↓
+         MongoDB
+```
+
+## Run locally
 
 ### Prerequisites
-* [Node.js](https://nodejs.org/en/) (v18 or higher)
-* [MongoDB](https://www.mongodb.com/try/download/community) (Local installation or a free MongoDB Atlas URI)
 
-### 1. Clone the repository
+- Node.js 18+
+- A MongoDB instance (local or Atlas)
+
+### 1. Clone and install dependencies
+
 ```bash
-git clone https://github.com/your-username/mutual.git
-cd mutual
+git clone https://github.com/tonysoftwarengineer/Mutual-Accountability-Web-platform.git
+cd Mutual-Accountability-Web-platform
+
+cd server && npm install
+cd ../client && npm install
 ```
 
-### 2. Install Dependencies
+### 2. Configure the server
+
+Copy the included template and set your values:
+
 ```bash
-# Install backend dependencies
 cd server
-npm install
-
-# Install frontend dependencies
-cd ../client
-npm install
+cp .env.example .env
 ```
 
-### 3. Environment Setup
-Create a `.env` file in the `server` directory:
+Required variables:
+
 ```env
-PORT=5000
-NODE_ENV=development
+PORT=5001
 CLIENT_URL=http://localhost:5173
-
-# Database & Auth
-MONGO_URI=your_mongodb_connection_string_here
-JWT_SECRET=generate_a_random_secret_key_here
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=use_a_long_random_value
+JWT_EXPIRES_IN=7d
 ```
 
-### 4. Run the Application
+### 3. Start the application
+
+In two terminals:
+
 ```bash
-# Start backend (from server directory)
+# terminal 1
+cd server
 npm run dev
 
-# Start frontend (from client directory in a new terminal)
+# terminal 2
+cd client
 npm run dev
 ```
 
-## 📂 Project Structure
+The client runs on Vite's local URL (normally `http://localhost:5173`).
+
+## Repository structure
+
 ```text
-mutual/
-├── client/                # React Frontend (Vite)
-│   ├── src/
-│   │   ├── components/    # Reusable UI (shadcn/ui)
-│   │   ├── pages/         # Route views (Dashboard, Login, etc.)
-│   │   ├── store/         # Zustand state management
-│   │   └── lib/           # Axios config and utils
-├── server/                # Node.js Backend
-│   ├── controllers/       # Route logic
-│   ├── models/            # Mongoose schemas
-│   ├── routes/            # Express API routes
-│   ├── middleware/        # Auth & Zod validation
-│   └── jobs/              # node-cron streak calculators
-└── README.md
+├── client/              # React application
+│   └── src/             # Routes, components, store, and API utilities
+├── server/              # Express application
+│   ├── controllers/     # Request-handling logic
+│   ├── middleware/      # Authentication and validation
+│   ├── models/          # Mongoose schemas
+│   ├── routes/          # REST endpoints
+│   └── utils/           # Shared server utilities
+└── server/.env.example  # Environment-variable template
 ```
 
-## 👥 The Team
-Built by a 4-person software engineering squad:
-* **Backend Lead:** Server, Auth, WebSockets, Cron Jobs
-* **Database Developer:** Schemas, Zod Validation, Seeding
-* **Frontend Lead:** React Architecture, Zustand, API Wiring
-* **UI/UX Developer:** Tailwind CSS, shadcn/ui, Responsive Design
+## Future improvements
+
+- Add automated tests to the npm test workflow.
+- Add a deployment configuration and CI checks.
+- Introduce real-time partner notifications where the product needs them.
